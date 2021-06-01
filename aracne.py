@@ -95,30 +95,38 @@ class Aracne(object):
             Output:
             Threshold value (int).
             """
-
-            perm_matrix = list()
-            dummy = matrix.T
-            n_cases, n_genes = dummy.shape
+            n_perm = 1
+            matrixt = matrix.T
+            n_cases, n_genes = matrixt.shape
+            permutations = np.zeros((n_perm, n_genes, n_cases))
 
             # Execution of the permutation
-            for i in range(n_cases):
-                id = np.random.permutation(n_genes)
-                perm_matrix.append(dummy[i][id])
+            for perm in range(n_perm):
+                print(" Computing permutation:", perm + 1)
+                perm_matrix = list()
 
-            perm_matrix = np.array(perm_matrix, dtype = "float64").T
-            dummy = np.zeros((n_genes, n_genes), dtype = "float64")
+                for i in range(n_cases):
+                    id = np.random.permutation(n_genes)
+                    perm_matrix.append(matrixt[i][id])
 
-            # Execution of the MIM computation
-            for i in range(0, n_genes):
-                x = perm_matrix[i]
+                perm_matrix = np.array(perm_matrix, dtype = "float64").T
+                dummy = np.zeros((n_genes, n_genes), dtype = "float64")
 
-                for j in range(i + 1, n_genes):
-                    y = perm_matrix[j]
-                    dummy[i][j] = sum_mi(x, y, bins)
+                # Execution of the MIM computation
+                for i in range(0, n_genes):
+                    x = perm_matrix[i]
 
-            return np.amax(dummy)
+                    for j in range(i + 1, n_genes):
+                        y = perm_matrix[j]
+                        dummy[i][j] = sum_mi(x, y, bins)
 
-        size = self.genes.shape[0]
+                # Save permutation
+                permutations[perm] = dummy
+
+            return np.amax(np.mean(permutations, axis = 0))
+
+        #size = self.genes.shape[0]
+        size = 10
         matrix = np.zeros((size, size), dtype = "float64")
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 

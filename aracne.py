@@ -23,7 +23,7 @@ class Aracne(object):
     def __reading(self, path):
         """
         Read the data of the gene-case matrix and save the information in
-        anp.array.
+        a np.array.
 
         Input:
         Path (string) to the gene-case matrix
@@ -39,13 +39,14 @@ class Aracne(object):
             with open(path, "r") as data:
                 matrix = list()
                 genes = list()
+                percent = 1
 
                 with Timer("Reading matrix..."):
                     for line in list(data):
-                        dummy = line.replace("\n", "")
-                        dummy = line.replace("\r", "")
-                        matrix.append(dummy.split("\t")[1:])
-                        genes.append(dummy.split("\t")[0])
+                        dummy = line.replace("\n", "").replace("\r", "").split("\t")
+                        if np.count_nonzero(np.array(dummy[1:], dtype = "float64")) >= len(dummy[1:]) * percent:
+                            matrix.append(dummy[1:])
+                            genes.append(dummy[0])
 
                     self.weight_matrix = np.array(matrix, dtype = "float64")
                     self.genes = np.array(genes)

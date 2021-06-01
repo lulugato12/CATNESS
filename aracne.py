@@ -1,4 +1,5 @@
 from sklearn.metrics import mutual_info_score
+from timer import Timer
 from math import log
 import pandas as pd
 import numpy as np
@@ -39,14 +40,15 @@ class Aracne(object):
                 matrix = list()
                 genes = list()
 
-                for line in list(data):
-                    dummy = line.replace("\n", "")
-                    dummy = line.replace("\r", "")
-                    matrix.append(dummy.split("\t")[1:])
-                    genes.append(dummy.split("\t")[0])
+                with Timer("Reading matrix..."):
+                    for line in list(data):
+                        dummy = line.replace("\n", "")
+                        dummy = line.replace("\r", "")
+                        matrix.append(dummy.split("\t")[1:])
+                        genes.append(dummy.split("\t")[0])
 
-                self.weight_matrix = np.array(matrix, dtype = "float64")
-                self.genes = np.array(genes)
+                    self.weight_matrix = np.array(matrix, dtype = "float64")
+                    self.genes = np.array(genes)
         except FileNotFoundError:
             print("Unable to find gene-case file.")
 
@@ -83,13 +85,16 @@ class Aracne(object):
         matrix = np.full((size, size), np.inf, dtype = "float64")
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
-        for i in range(0, size):
-            x = self.weight_matrix[i]
-            for j in range(i + 1, size):
-                y = self.weight_matrix[j]
-                matrix[i][j] = sum_mi(x, y, bins)
+        with Timer("Calculating Mutual Information Matrix..."):
+            for i in range(0, size):
+                print("Computing for gene:", i)
+                x = self.weight_matrix[i]
+                
+                for j in range(i + 1, size):
+                    y = self.weight_matrix[j]
+                    matrix[i][j] = sum_mi(x, y, bins)
 
-        self.mim = np.array(matrix, dtype = "float64")
+            self.mim = np.array(matrix, dtype = "float64")
 
     # ARACNE algoritmo
     def __aracne_loop(self):

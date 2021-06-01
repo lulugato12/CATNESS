@@ -22,7 +22,7 @@ class Aracne(object):
     # Data reading
     def __reading(self, path):
         """
-        Read the data of the gene-case matrix and save the information in
+        Reads the data of the gene-case matrix and save the information in
         a np.array.
 
         Input:
@@ -44,6 +44,8 @@ class Aracne(object):
                 with Timer("Reading matrix..."):
                     for line in list(data):
                         dummy = line.replace("\n", "").replace("\r", "").split("\t")
+
+                        # Take only those that are significant for the cases
                         if np.count_nonzero(np.array(dummy[1:], dtype = "float64")) >= len(dummy[1:]) * percent:
                             matrix.append(dummy[1:])
                             genes.append(dummy[0])
@@ -56,7 +58,7 @@ class Aracne(object):
     # Mutual Information Matrix
     def __mim(self):
         """
-        Calculate the mutual information matrix from each pair of genes.
+        Calculates the mutual information matrix from each pair of genes.
 
         Input:
         None.
@@ -67,7 +69,7 @@ class Aracne(object):
 
         def sum_mi(x, y, bins):
             """
-            Compute the mutual information score of the discrete probability
+            Computes the mutual information score of the discrete probability
             variable of each pair of genes.
 
             Input:
@@ -83,10 +85,22 @@ class Aracne(object):
             return mi
 
         def threshold_calculation(matrix, bins):
+            """
+            Compute the threshold to make a clearer mutual information matrix.
+
+            Input:
+            First MIM computation and the amount of bins to calculate the MIM
+            of the permutation.
+
+            Output:
+            Threshold value (int).
+            """
+
             perm_matrix = list()
             dummy = matrix.T
             n_cases, n_genes = dummy.shape
 
+            # Execution of the permutation
             for i in range(n_cases):
                 id = np.random.permutation(n_genes)
                 perm_matrix.append(dummy[i][id])
@@ -94,6 +108,7 @@ class Aracne(object):
             perm_matrix = np.array(perm_matrix, dtype = "float64").T
             dummy = np.zeros((n_genes, n_genes), dtype = "float64")
 
+            # Execution of the MIM computation
             for i in range(0, n_genes):
                 x = perm_matrix[i]
 

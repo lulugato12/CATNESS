@@ -1,4 +1,5 @@
-from pyitlib import discrete_random_variable as drv
+from sklearn.metrics import mutual_info_score
+from math import log
 import pandas as pd
 import numpy as np
 
@@ -10,22 +11,27 @@ class Aracne(object):
         self.__reading(path)
 
         # Construction of the mutual information matrix
+        if hasattr(self, "weight_matrix"):
+            self.__mim()
 
-        # Execution of the ARACNE algorithm
+            # Execution of the ARACNE algorithm
 
-        # Normalization of the coexpression network
+            # Normalization of the coexpression network
 
     # Data reading
     def __reading(self, path):
         """
-        Read the data of the gene-case matrix and save the information in a np.array.
+        Read the data of the gene-case matrix and save the information in
+        anp.array.
 
         Input:
-        Path to the gene-case matrix
+        Path (string) to the gene-case matrix
 
         Output:
-        Weigh_matrix (np.array) that contains the measure of each gene in each case.
-        Genes presented (np.array) in the weight_matrix in their respected order.
+        Weigh_matrix variable (np.array) that contains the measure of each
+        gene in each case.
+        Genes presented variable(np.array) in the weight_matrix in their
+        respected order.
         """
 
         try:
@@ -46,7 +52,44 @@ class Aracne(object):
 
     # Mutual Information Matrix
     def __mim(self):
-        pass
+        """
+        Calculate the mutual information matrix from each pair of genes.
+
+        Input:
+        None.
+
+        Output:
+        Mim variable (np.array) which contains the mutual information matrix.
+        """
+
+        def sum_mi(x, y, bins):
+            """
+            Compute the mutual information score of the discrete probability
+            variable of each pair of genes.
+
+            Input:
+            Data array of each gene and the number of bins for the
+            discretization process.
+
+            Output:
+            Mutual information score variable (int).
+            """
+
+            c_xy = np.histogram2d(x, y, bins)[0]
+            mi = mutual_info_score(None, None, contingency=c_xy)
+            return mi
+
+        size = self.genes.shape[0]
+        matrix = np.full((size, size), np.inf, dtype = "float64")
+        bins = round(1 + 3.22 * log(size))                  # sturge's rule
+
+        for i in range(0, size):
+            x = self.weight_matrix[i]
+            for j in range(i + 1, size):
+                y = self.weight_matrix[j]
+                matrix[i][j] = sum_mi(x, y, bins)
+
+        self.mim = np.array(matrix, dtype = "float64")
 
     # ARACNE algoritmo
     def __aracne_loop(self):

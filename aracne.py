@@ -81,20 +81,44 @@ class Aracne(object):
             mi = mutual_info_score(None, None, contingency=c_xy)
             return mi
 
+        def threshold_calculation(matrix, bins):
+            perm_matrix = list()
+            dummy = matrix.T
+            n_cases, n_genes = dummy.shape
+
+            for i in range(n_cases):
+                id = np.random.permutation(n_genes)
+                perm_matrix.append(dummy[i][id])
+
+            perm_matrix = np.array(perm_matrix, dtype = "float64").T
+            dummy = np.zeros((n_genes, n_genes), dtype = "float64")
+
+            for i in range(0, n_genes):
+                x = perm_matrix[i]
+
+                for j in range(i + 1, n_genes):
+                    y = perm_matrix[j]
+                    dummy[i][j] = sum_mi(x, y, bins)
+
+            return np.amax(dummy)
+
         size = self.genes.shape[0]
-        matrix = np.full((size, size), np.inf, dtype = "float64")
+        matrix = np.zeros((size, size), dtype = "float64")
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
         with Timer("Calculating Mutual Information Matrix..."):
             for i in range(0, size):
                 print("Computing for gene:", i)
                 x = self.weight_matrix[i]
-                
+
                 for j in range(i + 1, size):
                     y = self.weight_matrix[j]
                     matrix[i][j] = sum_mi(x, y, bins)
 
-            self.mim = np.array(matrix, dtype = "float64")
+        with Timer("Calculating threshold..."):
+            I_0 = threshold_calculation(matrix, bins)
+            id = np.where(matrix < I_0)
+            matrix[id] = 0
 
     # ARACNE algoritmo
     def __aracne_loop(self):

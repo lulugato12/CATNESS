@@ -67,6 +67,38 @@ class Aracne(object):
         Mim variable (np.array) which contains the mutual information matrix.
         """
 
+        def matrix_calc(size, bins, data = None):
+            """
+            Calculates the mutual information matrix.
+
+            Input:
+            The number of genes, the number of bins and the genes samples.
+
+            Output:
+            Matrix (np.array) with the mim.
+            """
+
+            matrix = np.zeros((size, size), dtype = "float64")
+
+            if type(data) != type(None):
+                for i in range(0, size):
+                    print("Computing for gene:", i)
+                    x = data[i]
+
+                    for j in range(i + 1, size):
+                        y = data[j]
+                        matrix[i][j] = sum_mi(x, y, bins)
+            else:
+                for i in range(0, size):
+                    print("Computing for gene:", i)
+                    x = self.weight_matrix[i]
+
+                    for j in range(i + 1, size):
+                        y = self.weight_matrix[j]
+                        matrix[i][j] = sum_mi(x, y, bins)
+
+            return matrix
+
         def sum_mi(x, y, bins):
             """
             Computes the mutual information score of the discrete probability
@@ -82,6 +114,7 @@ class Aracne(object):
 
             c_xy = np.histogram2d(x, y, bins)[0]
             mi = mutual_info_score(None, None, contingency=c_xy)
+
             return mi
 
         def threshold_calculation(matrix, bins):
@@ -95,6 +128,7 @@ class Aracne(object):
             Output:
             Threshold value (int).
             """
+
             n_perm = 1
             matrixt = matrix.T
             n_cases, n_genes = matrixt.shape
@@ -110,34 +144,24 @@ class Aracne(object):
                     perm_matrix.append(matrixt[i][id])
 
                 perm_matrix = np.array(perm_matrix, dtype = "float64").T
-                dummy = np.zeros((n_genes, n_genes), dtype = "float64")
 
                 # Execution of the MIM computation
-                for i in range(0, n_genes):
-                    x = perm_matrix[i]
-
-                    for j in range(i + 1, n_genes):
-                        y = perm_matrix[j]
-                        dummy[i][j] = sum_mi(x, y, bins)
+                dummy = matrix_calc(n_genes, bins, perm_matrix)
 
                 # Save permutation
                 permutations[perm] = dummy
 
             return np.amax(np.mean(permutations, axis = 0))
 
+        def remove_loops():
+            pass
+
         #size = self.genes.shape[0]
         size = 10
-        matrix = np.zeros((size, size), dtype = "float64")
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
         with Timer("Calculating Mutual Information Matrix..."):
-            for i in range(0, size):
-                print("Computing for gene:", i)
-                x = self.weight_matrix[i]
-
-                for j in range(i + 1, size):
-                    y = self.weight_matrix[j]
-                    matrix[i][j] = sum_mi(x, y, bins)
+            matrix = matrix_calc(size, bins)
 
         with Timer("Calculating threshold..."):
             I_0 = threshold_calculation(matrix, bins)

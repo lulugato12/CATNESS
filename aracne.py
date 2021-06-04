@@ -153,11 +153,23 @@ class Aracne(object):
 
             return np.amax(np.mean(permutations, axis = 0))
 
-        def remove_loops():
-            pass
+        def remove_loops(size, matrix):
+            zero = list()
 
-        #size = self.genes.shape[0]
-        size = 10
+            for i in range(size):
+                row = np.where(matrix[i] != 0)[0]
+                for j in row:
+                    column = np.where(matrix[j] != 0)[0]
+                    for x in column:
+                        if matrix[i][x] != 0:
+                            data = {0: (i, j), 1: (i, x), 2: (j, x)}
+                            values = [matrix[i][j], matrix[i][x], matrix[j][x]]
+                            if data[np.argmin(values)] not in zero:
+                                zero.append(data[np.argmin(values)])
+            return zero
+
+        # conda install pytorch torchvision cpuonly -c pytorch
+        size = self.genes.shape[0]
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
         with Timer("Calculating Mutual Information Matrix..."):
@@ -167,6 +179,13 @@ class Aracne(object):
             I_0 = threshold_calculation(matrix, bins)
             id = np.where(matrix < I_0)
             matrix[id] = 0
+
+        with Timer("Removing loops..."):
+            ids = remove_loops(size, matrix)
+            for i in ids:
+                matrix[i] = 0
+
+        self.mim = np.array(matrix, dtype = "float64")
 
     # ARACNE algoritmo
     def __aracne_loop(self):

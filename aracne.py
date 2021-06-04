@@ -13,9 +13,7 @@ class Aracne(object):
 
         # Construction of the mutual information matrix
         if hasattr(self, "weight_matrix"):
-            self.__mim()
-
-            # Execution of the ARACNE algorithm
+            self.__aracne()
 
             # Normalization of the coexpression network
 
@@ -56,7 +54,7 @@ class Aracne(object):
             print("Unable to find gene-case file.")
 
     # Mutual Information Matrix
-    def __mim(self):
+    def __aracne(self):
         """
         Calculates the mutual information matrix from each pair of genes.
 
@@ -154,6 +152,18 @@ class Aracne(object):
             return np.amax(np.mean(permutations, axis = 0))
 
         def remove_loops(size, matrix):
+            """
+            Finds the possible loops inside the mutual information matrix.
+
+            Input:
+            The size of the matrix and the temporal mutual information
+            matrix.
+
+            Output:
+            A list of tuples of the edges that creates loops and are
+            weak.
+            """
+
             zero = list()
 
             for i in range(size):
@@ -168,7 +178,6 @@ class Aracne(object):
                                 zero.append(data[np.argmin(values)])
             return zero
 
-        # conda install pytorch torchvision cpuonly -c pytorch
         size = self.genes.shape[0]
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
@@ -186,10 +195,6 @@ class Aracne(object):
                 matrix[i] = 0
 
         self.mim = np.array(matrix, dtype = "float64")
-
-    # ARACNE algoritmo
-    def __aracne_loop(self):
-        pass
 
     # Normalizacion
     def __normalization(self):

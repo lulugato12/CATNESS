@@ -15,7 +15,7 @@ class Aracne(object):
         if hasattr(self, "weight_matrix"):
             self.__aracne()
 
-            # Normalization of the coexpression network
+        # Normalization of the coexpression network
 
     # Data reading
     def __reading(self, path):
@@ -37,21 +37,23 @@ class Aracne(object):
             with open(path, "r") as data:
                 matrix = list()
                 genes = list()
-                percent = 1
+                percent = 1     # least percent of non-zero values per sample
 
                 with Timer("Reading matrix..."):
-                    for line in list(data):
+                    for line in data:
                         dummy = line.replace("\n", "").replace("\r", "").split("\t")
+                        arr = np.array(dummy[1:], dtype = "float64")
+                        gene = dummy[0]
 
                         # Take only those that are significant for the cases
-                        if np.count_nonzero(np.array(dummy[1:], dtype = "float64")) >= len(dummy[1:]) * percent:
-                            matrix.append(dummy[1:])
-                            genes.append(dummy[0])
+                        if np.count_nonzero(arr) >= len(arr) * percent:
+                            matrix.append(arr)
+                            genes.append(gene)
 
-                    self.weight_matrix = np.array(matrix, dtype = "float64")
+                    self.weight_matrix = np.vstack((matrix)).T
                     self.genes = np.array(genes)
         except FileNotFoundError:
-            print("Unable to find gene-case file.")
+            print("Unable to find the samples file.")
 
     # Mutual Information Matrix
     def __aracne(self):
@@ -79,19 +81,19 @@ class Aracne(object):
             matrix = np.zeros((size, size), dtype = "float64")
 
             if type(data) != type(None):
-                for i in range(0, size):
+                for i in xrange(0, size):
                     print("Computing for gene:", i)
                     x = data[i]
 
-                    for j in range(i + 1, size):
+                    for j in xrange(i + 1, size):
                         y = data[j]
                         matrix[i][j] = sum_mi(x, y, bins)
             else:
-                for i in range(0, size):
+                for i in xrange(0, size):
                     print("Computing for gene:", i)
                     x = self.weight_matrix[i]
 
-                    for j in range(i + 1, size):
+                    for j in xrange(i + 1, size):
                         y = self.weight_matrix[j]
                         matrix[i][j] = sum_mi(x, y, bins)
 
@@ -133,11 +135,11 @@ class Aracne(object):
             permutations = np.zeros((n_perm, n_genes, n_cases))
 
             # Execution of the permutation
-            for perm in range(n_perm):
+            for perm in xrange(n_perm):
                 print(" Computing permutation:", perm + 1)
                 perm_matrix = list()
 
-                for i in range(n_cases):
+                for i in xrange(n_cases):
                     id = np.random.permutation(n_genes)
                     perm_matrix.append(matrixt[i][id])
 
@@ -166,7 +168,7 @@ class Aracne(object):
 
             zero = list()
 
-            for i in range(size):
+            for i in xrange(size):
                 row = np.where(matrix[i] != 0)[0]
                 for j in row:
                     column = np.where(matrix[j] != 0)[0]
@@ -178,7 +180,8 @@ class Aracne(object):
                                 zero.append(data[np.argmin(values)])
             return zero
 
-        size = self.genes.shape[0]
+        #size = self.genes.shape[0]
+        size = 10
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
         with Timer("Calculating Mutual Information Matrix..."):
@@ -187,7 +190,7 @@ class Aracne(object):
         with Timer("Calculating threshold..."):
             I_0 = threshold_calculation(matrix, bins)
             id = np.where(matrix < I_0)
-            matrix[id] = 0
+            #matrix[id] = 0
 
         with Timer("Removing loops..."):
             ids = remove_loops(size, matrix)

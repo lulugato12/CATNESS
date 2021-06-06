@@ -26,7 +26,7 @@ class Aracne(object):
         Input:
         Path (string) to the gene-case matrix
 
-        Output:
+        Generates:
         Weigh_matrix variable (np.array) that contains the measure of each
         gene in each case.
         Genes presented variable(np.array) in the weight_matrix in their
@@ -63,7 +63,7 @@ class Aracne(object):
         Input:
         None.
 
-        Output:
+        Generates:
         Mim variable (np.array) which contains the mutual information matrix.
         """
 
@@ -198,3 +198,15 @@ class Aracne(object):
     # Normalizacion
     def __normalization(self):
         pass
+
+    # Save data
+    def save_mim(self, file = "data.csv", delimeter = ","):
+        """
+        Save the Mutual Information Matrix in the given file.
+
+        Input:
+        Name of the file (str) and the delimter (char).
+        """
+
+        with Timer("Saving data in the file: " + file + "..."):
+            np.savetxt(file, self.mim, delimiter = delimeter)

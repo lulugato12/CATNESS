@@ -81,20 +81,20 @@ class Aracne(object):
             matrix = np.zeros((size, size), dtype = "float64")
 
             if type(data) != type(None):
-                for i in xrange(0, size):
+                for i in np.arange(size):
                     print("Computing for gene:", i)
-                    x = data[i]
+                    x = data[:][i]
 
-                    for j in xrange(i + 1, size):
-                        y = data[j]
+                    for j in np.arange(i + 1, size):
+                        y = data[:][j]
                         matrix[i][j] = sum_mi(x, y, bins)
             else:
-                for i in xrange(0, size):
+                for i in np.arange(size):
                     print("Computing for gene:", i)
-                    x = self.weight_matrix[i]
+                    x = self.weight_matrix[:][i]
 
-                    for j in xrange(i + 1, size):
-                        y = self.weight_matrix[j]
+                    for j in np.arange(i + 1, size):
+                        y = self.weight_matrix[:][j]
                         matrix[i][j] = sum_mi(x, y, bins)
 
             return matrix
@@ -130,20 +130,16 @@ class Aracne(object):
             """
 
             n_perm = 1
-            matrixt = matrix.T
-            n_cases, n_genes = matrixt.shape
+            n_cases, n_genes = matrix.shape
             permutations = np.zeros((n_perm, n_genes, n_cases))
 
             # Execution of the permutation
-            for perm in xrange(n_perm):
+            for perm in np.arange(n_perm):
                 print(" Computing permutation:", perm + 1)
-                perm_matrix = list()
 
-                for i in xrange(n_cases):
-                    id = np.random.permutation(n_genes)
-                    perm_matrix.append(matrixt[i][id])
-
-                perm_matrix = np.array(perm_matrix, dtype = "float64").T
+                # Shuffle the matrix
+                perm_matrix = [matrix[i][np.random.permutation(n_genes)] for i in np.arange(n_cases)]
+                perm_matrix = np.vstack((perm_matrix))
 
                 # Execution of the MIM computation
                 dummy = matrix_calc(n_genes, bins, perm_matrix)
@@ -168,7 +164,7 @@ class Aracne(object):
 
             zero = list()
 
-            for i in xrange(size):
+            for i in np.arange(size):
                 row = np.where(matrix[i] != 0)[0]
                 for j in row:
                     column = np.where(matrix[j] != 0)[0]
@@ -180,7 +176,7 @@ class Aracne(object):
                                 zero.append(data[np.argmin(values)])
             return zero
 
-        #size = self.genes.shape[0]
+        #size = self.genes.shape[1]
         size = 10
         bins = round(1 + 3.22 * log(size))                  # sturge's rule
 

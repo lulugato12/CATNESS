@@ -1,7 +1,6 @@
 from sklearn.metrics import mutual_info_score
 from timer import Timer
 from math import log
-import pandas as pd
 import numpy as np
 
 class Aracne(object):

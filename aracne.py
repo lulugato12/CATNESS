@@ -49,13 +49,16 @@ class Aracne(object):
                             matrix.append(arr)
                             genes.append(gene)
 
+                        if len(genes) == 120:
+                            break
+
                     self.weight_matrix = np.vstack((matrix)).T
                     self.genes = np.array(genes)
         except FileNotFoundError:
             print("Unable to find the samples file.")
 
     # Mutual Information Matrix
-    def __aracne(self):
+    def __aracne(self, data = None):
         """
         Calculates the mutual information matrix from each pair of genes.
 
@@ -66,7 +69,7 @@ class Aracne(object):
         Mim variable (np.array) which contains the mutual information matrix.
         """
 
-        def matrix_calc(size, bins, data = None):
+        def matrix_calc(size, bins, data):
             """
             Calculates the mutual information matrix.
 
@@ -79,22 +82,13 @@ class Aracne(object):
 
             matrix = np.zeros((size, size), dtype = "float64")
 
-            if type(data) != type(None):
-                for i in np.arange(size):
-                    print("Computing for gene:", i)
-                    x = data[:][i]
+            for i in np.arange(size):
+                print("Computing for gene:", i)
+                x = data.T[i].copy()
 
-                    for j in np.arange(i + 1, size):
-                        y = data[:][j]
-                        matrix[i][j] = sum_mi(x, y, bins)
-            else:
-                for i in np.arange(size):
-                    print("Computing for gene:", i)
-                    x = self.weight_matrix[:][i]
-
-                    for j in np.arange(i + 1, size):
-                        y = self.weight_matrix[:][j]
-                        matrix[i][j] = sum_mi(x, y, bins)
+                for j in np.arange(i + 1, size):
+                    y = data.T[j].copy()
+                    matrix[i][j] = sum_mi(x, y, bins)
 
             return matrix
 
@@ -171,21 +165,26 @@ class Aracne(object):
                         if matrix[i][x] != 0:
                             data = {0: (i, j), 1: (i, x), 2: (j, x)}
                             values = [matrix[i][j], matrix[i][x], matrix[j][x]]
-                            if data[np.argmin(values)] not in zero:
-                                zero.append(data[np.argmin(values)])
+                            zero.append(data[np.argmin(values)])
             return zero
 
-        #size = self.genes.shape[1]
-        size = 10
-        bins = round(1 + 3.22 * log(size))                  # sturge's rule
+        size = 120 # delete later...
+
+        if type(data) != type(None):
+            #size = self.data.shape[1]
+            bins = round(1 + 3.22 * log(size))                  # sturge's rule
+        else:
+            data = self.weight_matrix.copy()
+            #size = data.shape[1]
+            bins = round(1 + 3.22 * log(size))                  # sturge's rule
 
         with Timer("Calculating Mutual Information Matrix..."):
-            matrix = matrix_calc(size, bins)
+            matrix = matrix_calc(size, bins, data)
 
         with Timer("Calculating threshold..."):
             I_0 = threshold_calculation(matrix, bins)
             id = np.where(matrix < I_0)
-            #matrix[id] = 0
+            matrix[id] = 0
 
         with Timer("Removing loops..."):
             ids = remove_loops(size, matrix)
@@ -197,6 +196,7 @@ class Aracne(object):
     # Normalizacion
     def __normalization(self):
         pass
+
 
     # Save data
     def save_mim(self, file = "data.csv", delimeter = ","):

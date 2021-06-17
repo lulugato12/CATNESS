@@ -26,7 +26,7 @@ class Aracne(object):
         Path (string) to the gene-case matrix
 
         Generates:
-        Weigh_matrix variable (np.array) that contains the measure of each
+        Weight_matrix variable (np.array) that contains the measure of each
         gene in each case.
         Genes presented variable(np.array) in the weight_matrix in their
         respected order.
@@ -171,7 +171,7 @@ class Aracne(object):
         size = 100 # delete later...
 
         if type(data) != type(None):
-            #size = self.data.shape[1]
+            #size = data.shape[1]
             bins = round(1 + 3.22 * log(size))                  # sturge's rule
         else:
             data = self.weight_matrix.copy()
@@ -197,6 +197,23 @@ class Aracne(object):
     # Normalizacion
     def __normalization(self):
         pass
+
+    # Infering single sample network
+    def single_sample_network(self):
+        n_cases, n_genes = self.weight_matrix.shape
+        mims = np.zeros((n_cases, n_genes, n_genes))
+
+        with Time("Infering each simple sample network..."):
+            for sample in np.arange(n_cases):
+                print("Computing sample " + str(sample) + "...")
+
+                # gene-case matrix without sample q
+                dummy = np.delete(self.weight_matrix, sample, 0)
+
+                # Computes the mim of the new matrix
+                mim_p = self.__aracne(dummy)
+
+                # Computes LIONESS algorithm (from c++ lib)
 
     # Save data
     def save_mim(self, file = "data.csv", delimeter = ","):

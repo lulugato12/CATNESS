@@ -1,5 +1,5 @@
 from sklearn.metrics import mutual_info_score
-from timer import Timer
+from helpers.timer import Timer
 from math import log
 import numpy as np
 
@@ -49,7 +49,7 @@ class Aracne(object):
                             matrix.append(arr)
                             genes.append(gene)
 
-                        if len(genes) == 120:
+                        if len(genes) == 100:
                             break
 
                     self.weight_matrix = np.vstack((matrix)).T
@@ -58,7 +58,7 @@ class Aracne(object):
             print("Unable to find the samples file.")
 
     # Mutual Information Matrix
-    def __aracne(self, data = None):
+    def __aracne(self, data = None, inequal_data = False):
         """
         Calculates the mutual information matrix from each pair of genes.
 
@@ -168,7 +168,7 @@ class Aracne(object):
                             zero.append(data[np.argmin(values)])
             return zero
 
-        size = 120 # delete later...
+        size = 100 # delete later...
 
         if type(data) != type(None):
             #size = self.data.shape[1]
@@ -186,17 +186,17 @@ class Aracne(object):
             id = np.where(matrix < I_0)
             matrix[id] = 0
 
-        with Timer("Removing loops..."):
-            ids = remove_loops(size, matrix)
-            for i in ids:
-                matrix[i] = 0
+        if inequal_data:
+            with Timer("Removing loops..."):
+                ids = remove_loops(size, matrix)
+                for i in ids:
+                    matrix[i] = 0
 
         self.mim = np.array(matrix, dtype = "float64")
 
     # Normalizacion
     def __normalization(self):
         pass
-
 
     # Save data
     def save_mim(self, file = "data.csv", delimeter = ","):

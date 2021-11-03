@@ -9,7 +9,7 @@ import os
 from helpers.timer import Timer
 
 class Catness(object):
-    def mim(size, bins, data):
+    def __mim(size, bins, data):
         """
         Calculates the mutual information matrix.
 
@@ -27,11 +27,11 @@ class Catness(object):
 
             for j in np.arange(i + 1, size):
                 y = data[j].copy()
-                matrix[i][j] = sum_mi(x, y, bins)
+                matrix[i][j] = __sum_mi(x, y, bins)
 
         return matrix
 
-    def sum_mi(x, y, bins):
+    def __sum_mi(x, y, bins):
         """
         Computes the mutual information score of the discrete probability
         variable of each pair of genes.
@@ -49,7 +49,7 @@ class Catness(object):
 
         return mi
 
-    def threshold_calculation(matrix, bins):
+    def __threshold_calculation(matrix, bins):
         """
         Computes the threshold to make a clearer mutual information matrix.
 
@@ -72,7 +72,7 @@ class Catness(object):
             perm_matrix = np.vstack((perm_matrix))
 
             # Execution of the MIM computation
-            dummy = mim(n_genes, bins, perm_matrix)
+            dummy = __mim(n_genes, bins, perm_matrix)
 
             # Save permutation
             permutations[perm] = dummy
@@ -98,10 +98,10 @@ class Catness(object):
             data_np = data.to_numpy()
 
         with Timer("Computing agg..."):
-            agg = mim(genes, bins, data_np)
+            agg = __mim(genes, bins, data_np)
 
             #threshold
-            I_0 = threshold_calculation(agg, bins)
+            I_0 = __threshold_calculation(agg, bins)
             id = np.where(agg < I_0)
             agg[id] = 0
             agg = agg.flatten()
@@ -115,10 +115,10 @@ class Catness(object):
 
         for i in np.arange(samples):
             with Timer("Computing for sample " + str(i) + "..."):
-                ss = mim(genes, bins, np.delete(data_np, i, axis = 1))
+                ss = __mim(genes, bins, np.delete(data_np, i, axis = 1))
 
                 # threshold
-                I_0 = threshold_calculation(ss, bins)
+                I_0 = __threshold_calculation(ss, bins)
                 id = np.where(ss < I_0)
                 ss[id] = 0
                 ss = ss.flatten()
@@ -127,7 +127,7 @@ class Catness(object):
 
         return output
 
-    def plot(data, path):
+    def plot_networks(data, path):
         """
         Plot the output of the LIONESS algorithm.
 

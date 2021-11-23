@@ -182,7 +182,8 @@ def compute_properties(data, path):
                 nw = pd.DataFrame(nx.degree(G), columns = ['genes', 'degree']).set_index('genes')
                 nw['betweenness_centrality'] = pd.Series(nx.betweenness_centrality(G))
                 nw['clustering'] = pd.Series(nx.clustering(G))
-                nw.insert(0, 'sample', [sample for i in range(nw.shape[0])])
+                nw.insert(0, 'sample', [sample.split('_')[0] for i in range(nw.shape[0])])
+                nw.insert(1, 'PAM50_subtype', [sample.split('_')[1] for i in range(nw.shape[0])])
                 nw.reset_index(level = 0, inplace = True)
                 total.append(nw)
 

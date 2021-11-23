@@ -167,14 +167,11 @@ class Catness(object):
         path (str) to the folder where the data is going to be saved.
 
         Output:
-        Directory with all the .csv from each sample.
+        .csv file with the properties degree, betweenness centrality and
+        clustering for each node of each sample.
         """
         G = nx.Graph()
-
-        try:
-            os.mkdir(path + 'properties/')
-        except OSError as error:
-            print('the folder already exists.')
+        total = []
 
         for sample in data.columns[2:]:
             with Timer('Calculating for sample ' + sample + '...'):
@@ -186,5 +183,8 @@ class Catness(object):
                 nw = pd.DataFrame(nx.degree(G), columns = ['genes', 'degree']).set_index('genes')
                 nw['betweenness_centrality'] = pd.Series(nx.betweenness_centrality(G))
                 nw['clustering'] = pd.Series(nx.clustering(G))
+                nw.insert(0, 'sample', [sample for i in range(nw.shape[0])])
+                nw.reset_index(level = 0, inplace = True)
+                total.append(nw)
 
-                nw.to_csv(path + 'properties/' + sample + '.csv')
+        pd.concat(total, axis = 0, ignore_index = True).to_csv(path + 'node_properties.csv')

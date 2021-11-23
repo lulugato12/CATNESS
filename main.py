@@ -1,13 +1,12 @@
-import CATNESS.lioness
+from CATNESS.catness import lioness_algorithm, plot_networks, compute_properties
+import timeit
+import pandas as pd
 
 start = timeit.default_timer()
 
-path = "C:/Users/hp/Desktop/mission_catness/"
-data = pd.read_csv(path + "output/15_cases.csv", index_col = 0)
-
-output, size = lioness.lioness_algorithm(data)
-lioness.plot(output, size)
-pd.DataFrame(output).to_csv(path + 'output/' + str(size) + "_mim.csv")
+path = ''
+mim = pd.read_csv(path + 'output/cases_pam50_mim.csv', index_col = 0)
+compute_properties(mim, path)
 
 end = timeit.default_timer()
-print("Tiempo de ejecusion:", end-start, "s")
+print('Properties computation time:', end-start, 's')

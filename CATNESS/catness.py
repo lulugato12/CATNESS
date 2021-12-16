@@ -188,3 +188,62 @@ def compute_properties(data, path):
                 total.append(nw)
 
         pd.concat(total, axis = 0, ignore_index = True).to_csv(path + 'node_properties.csv')
+
+def plot_degree(data, path, boxplot = True, scatter = True):
+    """
+    Plot the output of the LIONESS algorithm.
+
+    Input:
+    data (pd.DataFrame) with the following columns:
+    genes | sample | PAM50_subtype | degree | betweenness_centrality | clustering
+    path (str) to the folder where the data is going to be saved.
+    boxplot (bool) if required boxplot
+    scatter (bool) if required scatter
+
+    Output:
+    At least one of the following: a boxplot of the degree values of each
+    gene and a scatter of degree's mean vs. degree's std. deviation for each
+    gene.
+    """
+
+    genes = data['genes'].unique()
+    x = data.groupby('genes')['degree']
+
+    # Box
+    if boxplot:
+        fig, ax = plt.subplots(figsize = (20, 20))
+        genes_dict = {}
+
+        for gene in genes:
+            gb = list(data[data['genes'] == gene]['degree'])
+            genes_dict[gene] = gb
+
+        plt.boxplot(genes_dict.values())
+        plt.xticks(ticks = [i + 1 for i in range(50)], labels = genes, rotation = 70)
+        ax.set_xlabel('PAM50 Genes', fontsize = 16)
+        ax.set_ylabel('Degree', fontsize = 16)
+        ax.set_title('Degree per PAM Gene', fontsize = 20)
+
+        plt.savefig(path + 'boxplot.png', format = 'png')
+
+    # Scatter
+    if scatter:
+        fig, ax = plt.subplots(figsize = (20, 20))
+
+        ax.scatter(x.std(), x.mean())
+        ax.set_xlabel('Std. Deviation', fontsize = 16)
+        ax.set_ylabel('Mean', fontsize = 16)
+        ax.set_title('Degree Std. Deviation vs Mean', fontsize = 20)
+
+        plt.text(x=8.5, y=20, s="Q4", fontsize=16, color='b')
+        plt.text(x=2.2, y=20, s="Q3", fontsize=16, color='b')
+        plt.text(x=2.2, y=43, s="Q2", fontsize=16, color='b')
+        plt.text(x=8.5, y=43, s="Q1", fontsize=16, color='b')
+
+        ax.axhline(y=x.mean().mean(), color='k', linestyle='--', linewidth=1)
+        ax.axvline(x=x.std().mean(), color='k',linestyle='--', linewidth=1)
+
+        for gene in genes:
+            ax.text(x.std()[gene], x.mean()[gene], s = gene, fontsize = 10)
+
+        plt.savefig(path + 'scatter.png', format = 'png')

@@ -1,6 +1,9 @@
 from sklearn.metrics import mutual_info_score
 import matplotlib.pyplot as plt
 import networkx as nx
+from joblib import parallel_backend
+from joblib import Parallel, delayed
+from joblib import wrap_non_picklable_objects
 from math import log
 import numpy as np
 import pandas as pd
@@ -26,27 +29,10 @@ def mim(size, bins, data):
 
         for j in np.arange(i + 1, size):
             y = data[j].copy()
-            matrix[i][j] = sum_mi(x, y, bins)
+            c_xy = np.histogram2d(x, y, bins)[0]
+            matrix[i][j] = mutual_info_score(None, None, contingency=c_xy)
 
     return matrix
-
-def sum_mi(x, y, bins):
-    """
-    Computes the mutual information score of the discrete probability
-    variable of each pair of genes.
-
-    Input:
-    Data array of each gene and the number of bins for the
-    discretization process.
-
-    Output:
-    Mutual information score variable (int).
-    """
-
-    c_xy = np.histogram2d(x, y, bins)[0]
-    mi = mutual_info_score(None, None, contingency=c_xy)
-
-    return mi
 
 def threshold_calculation(matrix, bins, n_perm = 2):
     """
@@ -74,15 +60,65 @@ def threshold_calculation(matrix, bins, n_perm = 2):
 
     return np.amax(np.mean(permutations, axis = 0))
 
-def lioness_algorithm(data, path):
+@delayed
+@wrap_non_picklable_objects
+def par_mim(genes, cases, perm, bins, data, path, columns, k):
+    """
+    Parallelizable version with both mim and threshold_calculation functions.
+
+    Input:
+    genes (int): Number of genes.
+    cases (int): Number of cases.
+    perm (int): Number of permutations.
+    bins (int): Number of bins.
+    data (np.Array): Numeric matrix with samples in columns.
+    path (string): Path to the directory where the networks will be saved.
+    columns (np.Array): Array of strings with the names of the columns.
+    k (int): Current sample index.
+
+    Output:
+    Matrix (np.array) with the mim.
+    """
+
+    print('Computing for sample ' + str(k) + '...')
+    matrix = np.zeros((genes, genes), dtype = "float64")
+
+    for i in np.arange(genes):
+        x = data[i].copy()
+
+        for j in np.arange(i + 1, genes):
+            y = data[j].copy()
+            c_xy = np.histogram2d(x, y, bins)[0]
+            matrix[i][j] = mutual_info_score(None, None, contingency=c_xy)
+
+    matrix = matrix.flatten()
+    permutations = np.zeros((perm, genes, genes))
+
+    for p in np.arange(perm):
+        # Shuffle the matrix
+        perm_matrix = [data[np.random.permutation(genes), i] for i in np.arange(cases)]
+        perm_matrix = np.vstack(perm_matrix).T
+
+        # Execution of the MIM computation
+        permutations[p] = mim(genes, bins, perm_matrix)
+
+    I_0 = np.amax(np.mean(permutations, axis = 0))
+    matrix = np.where(matrix < I_0, 0, matrix)
+
+    # Save as .npy
+    np.save(path + columns[k].replace('.txt', '.npy'), matrix.reshape((genes, genes)))
+
+def lioness_algorithm(data, path, jobs = 1):
     """
     LIONESS algorithm.
 
     Input:
     data (pd.DataFrame): Numeric matrix with samples in columns.
+    path (string): Path to the directory where the networks will be saved.
+    jobs (int): Number of jobs to be parallelized.
 
     Output:
-    Sample-specific matrix.
+    Sample-specific matrix per each sample.
     """
     with Timer('Reading data...'):
         columns = data.columns.to_numpy()
@@ -97,20 +133,10 @@ def lioness_algorithm(data, path):
 
         with Timer('Computing I_0...'):
             #threshold
-            I_0 = threshold_calculation(data_np, bins, 5)
+            I_0 = threshold_calculation(data_np, bins, 3)
             agg = np.where(agg < I_0, 0, agg)
 
-    for i in np.arange(samples):
-        with Timer('Computing for sample ' + str(i) + '...'):
-            ss = mim(genes, bins, np.delete(data_np, i, axis = 1)).flatten()
-
-            with Timer('Computing I_0...'):
-                # threshold
-                I_0 = threshold_calculation(np.delete(data_np, i, axis = 1), bins, 5)
-                ss = np.where(ss < I_0, 0, ss)
-
-            # Save as .npy
-            np.save(path + columns[i].replace('.txt', '.npy'), ss.reshape((genes, genes)))
+    Parallel(n_jobs = jobs)(par_mim(genes, samples - 1, 3, bins, np.delete(data_np, i, axis = 1), path, columns, i) for i in np.arange(samples))
 
 def plot_networks(data, path):
     """

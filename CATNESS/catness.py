@@ -48,7 +48,7 @@ def sum_mi(x, y, bins):
 
     return mi
 
-def threshold_calculation(matrix, bins):
+def threshold_calculation(matrix, bins, n_perm = 2):
     """
     Computes the threshold to make a clearer mutual information matrix.
 
@@ -60,25 +60,21 @@ def threshold_calculation(matrix, bins):
     Threshold value (int).
     """
 
-    n_perm = 2
     n_genes, n_cases = matrix.shape
-    permutations = np.zeros((n_perm, n_genes, n_cases))
+    permutations = np.zeros((n_perm, n_genes, n_genes))
 
     # Execution of the permutation
     for perm in np.arange(n_perm):
         # Shuffle the matrix
-        perm_matrix = [matrix[i][np.random.permutation(n_genes)] for i in np.arange(n_cases)]
-        perm_matrix = np.vstack((perm_matrix))
+        perm_matrix = [matrix[np.random.permutation(n_genes), i] for i in np.arange(n_cases)]
+        perm_matrix = np.vstack(perm_matrix).T
 
         # Execution of the MIM computation
-        dummy = mim(n_genes, bins, perm_matrix)
-
-        # Save permutation
-        permutations[perm] = dummy
+        permutations[perm] = mim(n_genes, bins, perm_matrix)
 
     return np.amax(np.mean(permutations, axis = 0))
 
-def lioness_algorithm(data):
+def lioness_algorithm(data, path):
     """
     LIONESS algorithm.
 
@@ -96,35 +92,25 @@ def lioness_algorithm(data):
         bins = round(1 + 3.22 * log(genes))                  # sturge's rule
         data_np = data.to_numpy()
 
-    with Timer("Computing agg..."):
-        agg = mim(genes, bins, data_np)
+    with Timer('Computing agg...'):
+        agg = mim(genes, bins, data_np).flatten()
 
-        #threshold
-        I_0 = threshold_calculation(agg, bins)
-        id = np.where(agg < I_0)
-        agg[id] = 0
-        agg = agg.flatten()
-
-    reg = np.array([rows for i in np.arange(genes)]).flatten()
-    tar = np.array([[x for i in np.arange(genes)] for x in rows]).flatten()
-    output = pd.DataFrame({"reg": reg, "tar": tar})
-
-    for c in columns:
-        output[c] = np.transpose(np.zeros(genes*genes))
+        with Timer('Computing I_0...'):
+            #threshold
+            I_0 = threshold_calculation(data_np, bins, 5)
+            agg = np.where(agg < I_0, 0, agg)
 
     for i in np.arange(samples):
-        with Timer("Computing for sample " + str(i) + "..."):
-            ss = mim(genes, bins, np.delete(data_np, i, axis = 1))
+        with Timer('Computing for sample ' + str(i) + '...'):
+            ss = mim(genes, bins, np.delete(data_np, i, axis = 1)).flatten()
 
-            # threshold
-            I_0 = threshold_calculation(ss, bins)
-            id = np.where(ss < I_0)
-            ss[id] = 0
-            ss = ss.flatten()
+            with Timer('Computing I_0...'):
+                # threshold
+                I_0 = threshold_calculation(np.delete(data_np, i, axis = 1), bins, 5)
+                ss = np.where(ss < I_0, 0, ss)
 
-            output.update(pd.Series(samples * (agg - ss) + ss, name = columns[i]))
-
-    return output
+            # Save as .npy
+            np.save(path + columns[i].replace('.txt', '.npy'), ss.reshape((genes, genes)))
 
 def plot_networks(data, path):
     """

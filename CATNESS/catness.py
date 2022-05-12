@@ -11,7 +11,7 @@ import os
 
 from helpers.timer import Timer
 
-def mim(size, bins, data):
+def mim(size, bins, data, jobs, opt = 1):
     """
     Calculates the mutual information matrix.
 
@@ -23,18 +23,24 @@ def mim(size, bins, data):
     """
 
     matrix = np.zeros((size, size), dtype = "float64")
+    counter = 0
+
+    tempo = Parallel(n_jobs = jobs)(calc_mi(data[i].copy(), bins, data[j].copy()) for i in np.arange(size) for j in np.arange(i + 1, size))
 
     for i in np.arange(size):
-        x = data[i].copy()
-
         for j in np.arange(i + 1, size):
-            y = data[j].copy()
-            c_xy = np.histogram2d(x, y, bins)[0]
-            matrix[i][j] = mutual_info_score(None, None, contingency=c_xy)
+            matrix[i][j] = tempo[counter]
+            counter += 1
 
     return matrix
 
-def threshold_calculation(matrix, bins, n_perm = 2):
+@delayed
+@wrap_non_picklable_objects
+def calc_mi(x, bins, y):
+    c_xy = np.histogram2d(x, y, bins)[0]
+    return mutual_info_score(None, None, contingency=c_xy)
+
+def threshold_calculation(matrix, bins, jobs, n_perm = 2):
     """
     Computes the threshold to make a clearer mutual information matrix.
 
@@ -56,57 +62,9 @@ def threshold_calculation(matrix, bins, n_perm = 2):
         perm_matrix = np.vstack(perm_matrix).T
 
         # Execution of the MIM computation
-        permutations[perm] = mim(n_genes, bins, perm_matrix)
+        permutations[perm] = mim(n_genes, bins, perm_matrix, jobs)
 
     return np.amax(np.mean(permutations, axis = 0))
-
-@delayed
-@wrap_non_picklable_objects
-def par_mim(genes, cases, perm, bins, data, path, columns, k):
-    """
-    Parallelizable version with both mim and threshold_calculation functions.
-
-    Input:
-    genes (int): Number of genes.
-    cases (int): Number of cases.
-    perm (int): Number of permutations.
-    bins (int): Number of bins.
-    data (np.Array): Numeric matrix with samples in columns.
-    path (string): Path to the directory where the networks will be saved.
-    columns (np.Array): Array of strings with the names of the columns.
-    k (int): Current sample index.
-
-    Output:
-    Matrix (np.array) with the mim.
-    """
-
-    print('Computing for sample ' + str(k) + '...')
-    matrix = np.zeros((genes, genes), dtype = "float64")
-
-    for i in np.arange(genes):
-        x = data[i].copy()
-
-        for j in np.arange(i + 1, genes):
-            y = data[j].copy()
-            c_xy = np.histogram2d(x, y, bins)[0]
-            matrix[i][j] = mutual_info_score(None, None, contingency=c_xy)
-
-    matrix = matrix.flatten()
-    permutations = np.zeros((perm, genes, genes))
-
-    for p in np.arange(perm):
-        # Shuffle the matrix
-        perm_matrix = [data[np.random.permutation(genes), i] for i in np.arange(cases)]
-        perm_matrix = np.vstack(perm_matrix).T
-
-        # Execution of the MIM computation
-        permutations[p] = mim(genes, bins, perm_matrix)
-
-    I_0 = np.amax(np.mean(permutations, axis = 0))
-    matrix = np.where(matrix < I_0, 0, matrix)
-
-    # Save as .npy
-    np.save(path + columns[k].replace('.txt', '.npy'), matrix.reshape((genes, genes)))
 
 def lioness_algorithm(data, path, jobs = 1):
     """
@@ -128,15 +86,30 @@ def lioness_algorithm(data, path, jobs = 1):
         bins = round(1 + 3.22 * log(genes))                  # sturge's rule
         data_np = data.to_numpy()
 
+    with Timer('Saving metadata...'):
+        np.savetxt('genes.txt', rows, fmt = '%s')
+
     with Timer('Computing agg...'):
-        agg = mim(genes, bins, data_np).flatten()
+        agg = mim(genes, bins, data_np, jobs).flatten()
 
         with Timer('Computing I_0...'):
             #threshold
-            I_0 = threshold_calculation(data_np, bins, 3)
+            I_0 = threshold_calculation(data_np, bins, jobs)
             agg = np.where(agg < I_0, 0, agg)
 
-    Parallel(n_jobs = jobs)(par_mim(genes, samples - 1, 3, bins, np.delete(data_np, i, axis = 1), path, columns, i) for i in np.arange(samples))
+    for i in np.arange(samples):
+        with Timer("Computing for sample " + str(i) + "..."):
+            ss = mim(genes, bins, np.delete(data_np, i, axis = 1), jobs)
+
+            # threshold
+            I_0 = threshold_calculation(ss, bins, jobs)
+            id = np.where(ss < I_0)
+            ss[id] = 0
+            print(ss)
+
+
+            # Save as .npy
+            #np.save(path + columns[i].replace('.txt', '.npy'), ss)
 
 def plot_networks(data, path):
     """
@@ -168,13 +141,11 @@ def plot_networks(data, path):
             nx.draw(G, with_labels=False, **options)
             plt.savefig(path + 'plots/' + sample.replace('.txt', '.png'))
 
-def compute_properties(data, path):
+def compute_properties(path):
         """
         Plot the output of the LIONESS algorithm.
 
         Input:
-        data (pd.DataFrame) with the following columns:
-        reg | tar | [sample 0] | ... | [sample n]
         path (str) to the folder where the data is going to be saved.
 
         Output:
@@ -183,6 +154,18 @@ def compute_properties(data, path):
         """
         G = nx.Graph()
         total = []
+
+        # recreate DataFrame
+        samples = os.listdir(path)
+        genes = np.loadtxt(path + 'genes.txt', dtype = type(''))
+
+        reg = np.array([genes for i in np.arange(len(genes))]).flatten()
+        tar = np.array([[x for i in np.arange(len(genes))] for x in genes]).flatten()
+        data = pd.DataFrame({"reg": reg, "tar": tar})
+
+        for s in samples[1:]:
+            n = np.transpose(np.load(path + s).flatten())
+            data[s.replace('.npy', '')] = pd.Series(n)
 
         for sample in data.columns[2:]:
             with Timer('Calculating for sample ' + sample + '...'):

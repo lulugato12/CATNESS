@@ -11,7 +11,7 @@ import os
 
 from helpers.timer import Timer
 
-def mim(size, bins, data, jobs, opt = 1):
+def mim(size, bins, data, jobs):
     """
     Calculates the mutual information matrix.
 

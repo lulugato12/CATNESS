@@ -105,11 +105,9 @@ def lioness_algorithm(data, path, jobs = 1):
             I_0 = threshold_calculation(ss, bins, jobs)
             id = np.where(ss < I_0)
             ss[id] = 0
-            print(ss)
-
 
             # Save as .npy
-            #np.save(path + columns[i].replace('.txt', '.npy'), ss)
+            np.save(path + columns[i].replace('.txt', '.npy'), ss)
 
 def plot_networks(data, path):
     """

@@ -84,6 +84,7 @@ def lioness_algorithm(data, path, jobs = 1):
         samples = len(columns)
         genes = len(rows)
         bins = round(1 + 3.22 * log(genes))                  # sturge's rule
+        bins2 = round(1 + 3.22 * log(genes))                 # sturge's rule
         data_np = data.to_numpy()
 
     with Timer('Saving metadata...'):
@@ -102,7 +103,7 @@ def lioness_algorithm(data, path, jobs = 1):
             ss = mim(genes, bins, np.delete(data_np, i, axis = 1), jobs)
 
             # threshold
-            I_0 = threshold_calculation(ss, bins, jobs)
+            I_0 = threshold_calculation(np.delete(data_np, i, axis = 1), bins2, jobs)
             id = np.where(ss < I_0)
             ss[id] = 0
 

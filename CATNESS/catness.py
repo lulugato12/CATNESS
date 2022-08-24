@@ -93,19 +93,10 @@ def lioness_algorithm(data, path, jobs = 1):
     with Timer('Computing agg...'):
         agg = mim(genes, bins, data_np, jobs).flatten()
 
-        with Timer('Computing I_0...'):
-            #threshold
-            I_0 = threshold_calculation(data_np, bins, jobs)
-            agg = np.where(agg < I_0, 0, agg)
-
     for i in np.arange(samples):
         with Timer("Computing for sample " + str(i) + "..."):
-            ss = mim(genes, bins, np.delete(data_np, i, axis = 1), jobs)
-
-            # threshold
-            I_0 = threshold_calculation(np.delete(data_np, i, axis = 1), bins2, jobs)
-            id = np.where(ss < I_0)
-            ss[id] = 0
+            ss = mim(genes, bins, np.delete(data_np, i, axis = 1), jobs).flatten()
+            ss = samples * (agg - ss) + ss
 
             # Save as .npy
             np.save(path + columns[i].replace('.txt', '.npy'), ss)

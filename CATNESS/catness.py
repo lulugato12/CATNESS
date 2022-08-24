@@ -101,35 +101,48 @@ def lioness_algorithm(data, path, jobs = 1):
             # Save as .npy
             np.save(path + columns[i].replace('.txt', '.npy'), ss)
 
-def plot_networks(data, path):
+def plot_networks(nw_path, o_path, save_by_type = False):
     """
     Plot the output of the LIONESS algorithm.
 
     Input:
-    data (pd.DataFrame) with the following columns:
-    reg | tar | [sample 0] | ... | [sample n]
-    path (str) to the folder where the data is going to be saved.
+    nw_path (str) the folder where the data is going to be retrieved.
+    o_path (str) the folder where the data is going to be saved.
+    save_by_type (bool) to save the networks in the folder of its subtype
+                        (the folders must be created by the user).
 
     Output:
     Directory with all the plots from each sample.
     """
+
     G = nx.Graph()
     options = {'node_color': 'pink', 'node_size': 20, 'width': 0.2, 'font_size': 10}
+    nws = os.listdir(nw_path)
+    genes = np.loadtxt(genes_pam, dtype = type(''))
+    i = 1
 
-    try:
-        os.mkdir(path + 'plots/')
-    except OSError as error:
-        print('the folder already exists.')
+    reg = np.array([genes for i in np.arange(len(genes))]).flatten()
+    tar = np.array([[x for i in np.arange(len(genes))] for x in genes]).flatten()
+    data = pd.DataFrame({"reg": reg, "tar": tar})
+
+    for nw in nws:
+        n = np.transpose(np.load(nw_path + nw).flatten())
+        data[nw.replace('.npy', '')] = pd.Series(n)
 
     for sample in data.columns[2:]:
-        with Timer('Ploting sample: ' + sample + '...'):
+        with Timer('Calculating for sample ' + str(i) + ' ' + sample + '...'):
             positive = data.loc[data[sample] > 0]
             edges = list(zip(positive['reg'].to_list(), positive['tar'].to_list()))
 
+            plt.clf()
             G.clear()
             G.add_edges_from(edges)
             nx.draw(G, with_labels=False, **options)
-            plt.savefig(path + 'plots/' + sample.replace('.txt', '.png'))
+
+            save_at = sample.split('_')[1] + '/' + sample.replace('.txt', '.png') if save_by_type else sample.replace('.txt', '.png')
+            plt.savefig(o_path + save_at)
+
+            i += 1
 
 def compute_properties(nw_path, o_path):
     """
@@ -143,6 +156,7 @@ def compute_properties(nw_path, o_path):
     .csv file with the properties degree, betweenness centrality and
     clustering for each node of each sample.
     """
+    
     G = nx.Graph()
     total = []
 

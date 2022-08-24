@@ -78,6 +78,7 @@ def lioness_algorithm(data, path, jobs = 1):
     Output:
     Sample-specific matrix per each sample.
     """
+
     with Timer('Reading data...'):
         columns = data.columns.to_numpy()
         rows = data.index.to_numpy()
@@ -94,7 +95,7 @@ def lioness_algorithm(data, path, jobs = 1):
         agg = mim(genes, bins, data_np, jobs).flatten()
 
     for i in np.arange(samples):
-        with Timer("Computing for sample " + str(i) + "..."):
+        with Timer(f'Computing for sample {i}: {columns[i].split('_')[1]}...'):
             ss = mim(genes, bins, np.delete(data_np, i, axis = 1), jobs).flatten()
             ss = samples * (agg - ss) + ss
 
@@ -130,7 +131,7 @@ def plot_networks(nw_path, o_path, save_by_type = False):
         data[nw.replace('.npy', '')] = pd.Series(n)
 
     for sample in data.columns[2:]:
-        with Timer('Calculating for sample ' + str(i) + ' ' + sample + '...'):
+        with Timer(f'Calculating for sample {i}: {sample}...'):
             positive = data.loc[data[sample] > 0]
             edges = list(zip(positive['reg'].to_list(), positive['tar'].to_list()))
 
@@ -159,6 +160,7 @@ def compute_properties(nw_path, o_path):
 
     G = nx.Graph()
     total = []
+    i = 1
 
     nws = os.listdir(nw_path)
     genes = np.loadtxt(genes_pam, dtype = type(''))
@@ -172,7 +174,7 @@ def compute_properties(nw_path, o_path):
         data[nw.replace('.npy', '')] = pd.Series(n)
 
     for sample in data.columns[2:]:
-        with Timer('Calculating for sample ' + sample + '...'):
+        with Timer(f'Calculating for sample {i}: {sample}...'):
             positive = data.loc[data[sample] > 0]
             edges = list(zip(positive['reg'].to_list(), positive['tar'].to_list()))
             G.clear()
@@ -186,4 +188,6 @@ def compute_properties(nw_path, o_path):
             nw.reset_index(level = 0, inplace = True)
             total.append(nw)
 
-    pd.concat(total, axis = 0, ignore_index = True).to_csv(o_path + 'node_properties_v2.csv')
+            i += 1
+
+    pd.concat(total, axis = 0, ignore_index = True).to_csv(o_path + 'node_properties.csv')

@@ -131,48 +131,49 @@ def plot_networks(data, path):
             nx.draw(G, with_labels=False, **options)
             plt.savefig(path + 'plots/' + sample.replace('.txt', '.png'))
 
-def compute_properties(path):
-        """
-        Plot the output of the LIONESS algorithm.
+def compute_properties(nw_path, o_path):
+    """
+    Plot the output of the LIONESS algorithm.
 
-        Input:
-        path (str) to the folder where the data is going to be saved.
+    Input:
+    nw_path (str) the folder where the data is going to be retrieved.
+    o_path (str) the folder where the data is going to be saved.
 
-        Output:
-        .csv file with the properties degree, betweenness centrality and
-        clustering for each node of each sample.
-        """
-        G = nx.Graph()
-        total = []
+    Output:
+    .csv file with the properties degree, betweenness centrality and
+    clustering for each node of each sample.
+    """
+    G = nx.Graph()
+    total = []
 
-        # recreate DataFrame
-        samples = os.listdir(path)
-        genes = np.loadtxt(path + 'genes.txt', dtype = type(''))
+    nws = os.listdir(nw_path)
+    genes = np.loadtxt(genes_pam, dtype = type(''))
 
-        reg = np.array([genes for i in np.arange(len(genes))]).flatten()
-        tar = np.array([[x for i in np.arange(len(genes))] for x in genes]).flatten()
-        data = pd.DataFrame({"reg": reg, "tar": tar})
+    reg = np.array([genes for i in np.arange(len(genes))]).flatten()
+    tar = np.array([[x for i in np.arange(len(genes))] for x in genes]).flatten()
+    data = pd.DataFrame({"reg": reg, "tar": tar})
 
-        for s in samples[1:]:
-            n = np.transpose(np.load(path + s).flatten())
-            data[s.replace('.npy', '')] = pd.Series(n)
+    for nw in nws:
+        n = np.transpose(np.load(nw_path + nw).flatten())
+        data[nw.replace('.npy', '')] = pd.Series(n)
 
-        for sample in data.columns[2:]:
-            with Timer('Calculating for sample ' + sample + '...'):
-                positive = data.loc[data[sample] > 0]
-                edges = list(zip(positive['reg'].to_list(), positive['tar'].to_list()))
-                G.clear()
-                G.add_edges_from(edges)
+    for sample in data.columns[2:]:
+        with Timer('Calculating for sample ' + sample + '...'):
+            positive = data.loc[data[sample] > 0]
+            edges = list(zip(positive['reg'].to_list(), positive['tar'].to_list()))
+            G.clear()
+            G.add_edges_from(edges)
 
-                nw = pd.DataFrame(nx.degree(G), columns = ['genes', 'degree']).set_index('genes')
-                nw['betweenness_centrality'] = pd.Series(nx.betweenness_centrality(G))
-                nw['clustering'] = pd.Series(nx.clustering(G))
-                nw.insert(0, 'sample', [sample.split('_')[0] for i in range(nw.shape[0])])
-                nw.insert(1, 'PAM50_subtype', [sample.split('_')[1] for i in range(nw.shape[0])])
-                nw.reset_index(level = 0, inplace = True)
-                total.append(nw)
+            nw = pd.DataFrame(nx.degree(G), columns = ['genes', 'degree']).set_index('genes')
+            nw['betweenness_centrality'] = pd.Series(nx.betweenness_centrality(G))
+            nw['clustering'] = pd.Series(nx.clustering(G))
+            nw.insert(0, 'sample', [sample.split('_')[0] for i in range(nw.shape[0])])
+            nw.insert(1, 'PAM50_subtype', [sample.split('_')[1] for i in range(nw.shape[0])])
+            nw.reset_index(level = 0, inplace = True)
+            total.append(nw)
 
-        pd.concat(total, axis = 0, ignore_index = True).to_csv(path + 'node_properties.csv')
+    pd.concat(total, axis = 0, ignore_index = True).to_csv(o_path + 'node_properties_v2.csv')
+
 
 def plot_degree(data, path, boxplot = True, scatter = True):
     """
